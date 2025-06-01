@@ -23,10 +23,12 @@ app.use(cors());
 app.use(express.json());
 app.use('/api', apiRoutes)
 
-const rooms = {}; 
-const socketToRoom = {}; 
+const rooms = {};
+const socketToRoom = {};
+const roomCode = {};
 
 io.on("connection", (socket) => {
+
   socket.on("join-room", ({ roomId, username }) => {
     socket.join(roomId);
     socketToRoom[socket.id] = roomId;
@@ -38,14 +40,20 @@ io.on("connection", (socket) => {
       rooms[roomId].push({ userId: socket.id, username });
     }
 
+    console.log(`[SERVER] User ${username} (${socket.id}) joined room ${roomId}. Current users in room:`, rooms[roomId].map(u => u.username)); // DEBUG: Log user joining
+
     // Notify all in room that a new user joined
     io.to(roomId).emit("user-joined", {
       users: rooms[roomId],
       message: `${username} joined the room.`,
       userId: socket.id,
     });
-    
+
+    const existingCode = roomCode[roomId] || " ";
+    socket.emit('load-code', existingCode);
+
     socket.on("code-change", ({ roomId, code }) => {
+      roomCode[roomId] = code
       socket.to(roomId).emit("code-update", { code });
     });
   });
@@ -64,6 +72,7 @@ io.on("connection", (socket) => {
           message: `${user.username} left the room.`,
           userId: socket.id,
         });
+        console.log(`[SERVER] User ${user.username} (${socket.id}) left room ${roomId}. Remaining users:`, rooms[roomId].map(u => u.username)); // DEBUG: Log user leaving
       }
 
       if (rooms[roomId].length === 0) {
