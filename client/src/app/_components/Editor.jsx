@@ -7,20 +7,29 @@ import "react-toastify/dist/ReactToastify.css";
 import { SidebarControls } from "./SidebarControls";
 import { CodeEditorPanel } from "./MonacoEditor";
 import { InputOutputPanel } from "./InputOutput";
+import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 export default function CodeEditor({ socket, roomId, username }) {
-  const editorRef = useRef(null); 
-  const monacoRef = useRef(null); 
+  const editorRef = useRef(null);
+  const monacoRef = useRef(null);
   const [output, setOutput] = useState("");
   const [input, setInput] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const [language, setLanguage] = useState("javascript");
   const [theme, setTheme] = useState("vs-dark");
   const [users, setUsers] = useState([]);
-  const [userId] = useState(uuidv4()); 
+  const [userId] = useState(uuidv4());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const updatingEditorFromSocket = useRef(false);
   const [isEditorReady, setIsEditorReady] = useState(false);
+
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiResponse, setAiResponse] = useState('');
+  const [thinking, isThinking] = useState(false);
+
+  const [showAiResponseOverlay, setShowAiResponseOverlay] = useState(false);
 
   // Effect for handling user join/leave notifications
   useEffect(() => {
@@ -34,17 +43,26 @@ export default function CodeEditor({ socket, roomId, username }) {
     const handleUserLeft = ({ users, message }) => {
       toast.info(message || "A user left the room");
       setUsers(Array.isArray(users) ? users : []);
-      
+
     };
+
+    const handleAiRespone = ({ response }) => {
+      setAiResponse(response);
+      isThinking(false);
+      setShowAiResponseOverlay(true);
+      console.log("[CLIENT] AI response received.");
+    }
 
     socket.on("user-joined", handleUserJoined);
     socket.on("user-left", handleUserLeft);
+    socket.on("ai-response", handleAiRespone);
 
     return () => {
       socket.off("user-joined", handleUserJoined);
       socket.off("user-left", handleUserLeft);
+      socket.off("ai-response", handleAiRespone);
     };
-  }, [socket]); 
+  }, [socket]);
 
   // Callback for handling changes in the code editor
   const handleChange = useCallback((value) => {
@@ -52,6 +70,7 @@ export default function CodeEditor({ socket, roomId, username }) {
       socket.emit("code-change", { roomId, code: value });
     }
   }, [socket, roomId]);
+
 
   // Callback for when the Monaco editor is mounted
   const handleEditorDidMount = (editor, monaco) => {
@@ -68,7 +87,7 @@ export default function CodeEditor({ socket, roomId, username }) {
 
   // Effect for handling real-time code updates and initial code loading
   useEffect(() => {
-    if (!socket) return; 
+    if (!socket) return;
 
     // Handler for real-time code updates from other users
     const handleCodeUpdate = ({ code }) => {
@@ -76,33 +95,33 @@ export default function CodeEditor({ socket, roomId, username }) {
       if (editor && typeof code === "string") {
         const model = editor.getModel();
         if (model && code !== model.getValue()) {
-          updatingEditorFromSocket.current = true; 
-          model.setValue(code); 
-          updatingEditorFromSocket.current = false; 
+          updatingEditorFromSocket.current = true;
+          model.setValue(code);
+          updatingEditorFromSocket.current = false;
         } else {
-          console.log('[CLIENT] "code-update" received but editor content is identical or model not ready.'); 
+          console.log('[CLIENT] "code-update" received but editor content is identical or model not ready.');
         }
       } else {
-        console.log('[CLIENT] "code-update" received but editorRef.current is null or code is not a string.'); 
+        console.log('[CLIENT] "code-update" received but editorRef.current is null or code is not a string.');
       }
     };
 
     // Handler for initial code load when a user joins
     const handleLoadCode = (code) => {
-  
+
       const editor = editorRef.current;
       if (editor && typeof code === "string") {
         const model = editor.getModel();
-        
+
         if (model && code !== model.getValue()) {
-          updatingEditorFromSocket.current = true; 
+          updatingEditorFromSocket.current = true;
           model.setValue(code);
           updatingEditorFromSocket.current = false;
         } else {
-          console.log('[CLIENT] "load-code" received but editor content is identical or model not ready.'); 
+          console.log('[CLIENT] "load-code" received but editor content is identical or model not ready.');
         }
       } else {
-        console.log('[CLIENT] "load-code" received but editorRef.current is null or code is not a string.'); 
+        console.log('[CLIENT] "load-code" received but editorRef.current is null or code is not a string.');
       }
     };
 
@@ -130,18 +149,16 @@ export default function CodeEditor({ socket, roomId, username }) {
       }
     };
 
-   
+
     socket.on("code-update", handleCodeUpdate);
-    socket.on("load-code", handleLoadCode); 
+    socket.on("load-code", handleLoadCode);
     socket.on("cursor-update", handleCursorUpdate);
 
     if (isEditorReady) {
-        socket.emit("join-room", { roomId, username });
+      socket.emit("join-room", { roomId, username });
     } else {
-        console.log(`[CLIENT] Editor not ready yet, delaying 'join-room' emit for ${username}.`); // DEBUG
+      console.log(`[CLIENT] Editor not ready yet, delaying 'join-room' emit for ${username}.`); // DEBUG
     }
-
-
 
     return () => {
 
@@ -149,9 +166,9 @@ export default function CodeEditor({ socket, roomId, username }) {
       socket.off("load-code", handleLoadCode);
       socket.off("cursor-update", handleCursorUpdate);
     };
-  }, [socket, roomId, userId, username, isEditorReady]); 
+  }, [socket, roomId, userId, username, isEditorReady]);
 
- 
+
   const runCode = async () => {
     const code = editorRef.current?.getValue();
     if (!code) {
@@ -201,9 +218,56 @@ export default function CodeEditor({ socket, roomId, username }) {
     }
   };
 
+  const sendAiPrompt = () => {
+    if (!aiPrompt.trim()) {
+      toast.warn('please enter the prompt');
+      return;
+    }
+    isThinking(true)
+    setAiResponse("");
+    setShowAiResponseOverlay(true);
+    const currentCode = editorRef.current?.getValue() || " ";
+    socket.emit('ai-request', {
+      prompt: aiPrompt,
+      currentCode,
+      language
+    });
+    setAiPrompt(" ");
+  }
+  const dismissAiOverlay = () => {
+    setShowAiResponseOverlay(false);
+    setAiResponse(""); // Clear response when dismissed
+  };
+
+  // Markdown renderers
+  const renderers = {
+    code({ node, inline, className, children, ...props }) {
+      const match = /language-(\w+)/.exec(className || '');
+      return !inline && match ? (
+        <SyntaxHighlighter
+          style={vscDarkPlus}
+          language={match[1]}
+          PreTag="div"
+          {...props}
+        >
+          {String(children).replace(/\n$/, '')}
+        </SyntaxHighlighter>
+      ) : (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      );
+    },
+    p: ({ children }) => <p className="text-base mb-2">{children}</p>,
+    h1: ({ children }) => <h1 className="text-xl font-bold mt-4 mb-2">{children}</h1>,
+    h2: ({ children }) => <h2 className="text-lg font-semibold mt-3 mb-2">{children}</h2>,
+    ul: ({ children }) => <ul className="list-disc list-inside mb-2">{children}</ul>,
+    ol: ({ children }) => <ol className="list-decimal list-inside mb-2">{children}</ol>,
+    li: ({ children }) => <li className="mb-1">{children}</li>,
+  };
+
   return (
     <div className="flex h-screen bg-gray-900 text-gray-100 overflow-hidden">
-      {/* Overlay for sidebar on mobile */}
       {sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
@@ -221,13 +285,14 @@ export default function CodeEditor({ socket, roomId, username }) {
         runCode={runCode}
         isRunning={isRunning}
         copyRoomId={copyRoomId}
-        sidebarOpen={sidebarOpen} 
-        setSidebarOpen={setSidebarOpen} 
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        aiPrompt={aiPrompt}
+        setAiPrompt={setAiPrompt}
+        sendAiPrompt={sendAiPrompt}
       />
 
-      {/* Main content area */}
-      <div className="flex flex-col flex-1 ml-0 overflow-hidden">
-        {/* Mobile header with sidebar toggle */}
+      <div className="flex flex-col flex-1 ml-0 overflow-hidden relative">
         <header className="md:hidden flex items-center justify-between bg-gray-800 p-3 border-b border-gray-700">
           <button
             onClick={() => setSidebarOpen(true)}
@@ -243,9 +308,7 @@ export default function CodeEditor({ socket, roomId, username }) {
           <div />
         </header>
 
-       
         <main className="sm:flex w-full flex-1 gap-4 p-4 overflow-hidden">
-          {/* Code Editor Panel */}
           <div className="w-full sm:w-2/3 border border-gray-700 rounded overflow-hidden h-[60vh] sm:h-auto">
             <CodeEditorPanel
               language={language}
@@ -255,7 +318,6 @@ export default function CodeEditor({ socket, roomId, username }) {
             />
           </div>
 
-          {/* Input/Output Panel */}
           <div className="sm:w-1/3 pt-5 sm:pt-0 w-full flex flex-col gap-4 h-[40vh] sm:h-auto">
             <InputOutputPanel
               input={input}
@@ -264,9 +326,39 @@ export default function CodeEditor({ socket, roomId, username }) {
             />
           </div>
         </main>
+
+        {/* Full-page Overlay for AI Response */}
+        {showAiResponseOverlay && (
+          <div
+            className="absolute inset-0 bg-opacity-80 z-40 flex justify-center items-center p-6 bg-black/40 backdrop-blur-sm"
+          >
+            {/* Outer flex container that fills screen and centers inner box */}
+
+            <div
+              className="bg-gray-800 text-white rounded-lg shadow-lg p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto relative"
+            // max height limits modal height, overflow-y-auto allows scrolling inside modal
+            >
+              <button
+                onClick={dismissAiOverlay}
+                className="absolute top-2 right-2 text-gray-400 hover:text-white"
+              >
+                ✖
+              </button>
+              <h2 className="text-lg font-bold mb-4">
+                {thinking ? "AI is thinking..." : "AI Assistant Response"}
+              </h2>
+              {thinking ? (
+                <div className="text-center text-blue-400">Processing...</div>
+              ) : (
+                <ReactMarkdown components={renderers}>
+                  {aiResponse}
+                </ReactMarkdown>
+              )}
+            </div>
+          </div>
+        )}
       </div>
-      {/* Toast notifications container */}
-      <ToastContainer position="top-right" autoClose={3000} />
+      <ToastContainer position="bottom-right" />
     </div>
   );
 }
