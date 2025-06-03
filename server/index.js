@@ -56,6 +56,56 @@ io.on("connection", (socket) => {
       roomCode[roomId] = code
       socket.to(roomId).emit("code-update", { code });
     });
+
+    socket.on("ai-request", async ({ prompt, currentCode, language }) => {
+      let aiResponse = "I am sorry, I couldn't process";
+
+      try {
+        let chatHistory = [];
+        let fullPrompt = prompt;
+
+        if (currentCode && currentCode.trim() !== " ") {
+          console.log('There is no code recieve from the frontend');
+        }
+
+        chatHistory.push({ role: 'user', parts: [{ text: fullPrompt }] });
+        const payload = { contents: chatHistory };
+
+        const apiKey = "AIzaSyBT2JVrpXVYLtgY7nMZZP1OoHtOOmJSTG4";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`Gemini API error: ${response.status} - ${errorData.error?.message || response.statusText}`);
+        }
+
+        const result = await response.json();
+        if (result.candidates && result.candidates.length > 0 &&
+          result.candidates[0].content && result.candidates[0].content.parts &&
+          result.candidates[0].content.parts.length > 0) {
+          aiResponse = result.candidates[0].content.parts[0].text;
+          console.log(`[SERVER] AI response generated. Length: ${aiResponse.length}`);
+        } else {
+          aiResponse = "No valid response from AI.";
+          console.warn("[SERVER] Gemini API response structure unexpected:", result);
+        }
+      } catch (error) {
+        console.error("[SERVER] Error calling Gemini API:", error);
+        aiResponse = `Error contacting AI: ${error.message}`;
+      } finally {
+        // Emit the AI response back to the specific client that made the request
+        socket.emit("ai-response", { response: aiResponse });
+        console.log(`[SERVER] Emitted 'ai-response' to ${socket.id}.`);
+      }
+    })
   });
 
   socket.on("disconnect", () => {
