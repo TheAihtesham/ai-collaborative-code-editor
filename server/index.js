@@ -71,7 +71,7 @@ io.on("connection", (socket) => {
         chatHistory.push({ role: 'user', parts: [{ text: fullPrompt }] });
         const payload = { contents: chatHistory };
 
-        const apiKey = "AIzaSyBT2JVrpXVYLtgY7nMZZP1OoHtOOmJSTG4";
+        const apiKey = "";
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
         const response = await fetch(apiUrl, {
