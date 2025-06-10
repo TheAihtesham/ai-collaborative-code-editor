@@ -50,7 +50,7 @@ export default function CodeEditor({ socket, roomId, username }) {
       setAiResponse(response);
       isThinking(false);
       setShowAiResponseOverlay(true);
-      console.log("[CLIENT] AI response received.");
+
     }
 
     socket.on("user-joined", handleUserJoined);
@@ -76,20 +76,14 @@ export default function CodeEditor({ socket, roomId, username }) {
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
-    setIsEditorReady(true); // Set editor ready flag to true
+    setIsEditorReady(true); 
 
-    // Emit cursor position changes to other users
-    editor.onDidChangeCursorPosition((e) => {
-      const position = e.position;
-      socket.emit("cursor-move", { roomId, userId, position });
-    });
   };
 
   // Effect for handling real-time code updates and initial code loading
   useEffect(() => {
     if (!socket) return;
 
-    // Handler for real-time code updates from other users
     const handleCodeUpdate = ({ code }) => {
       const editor = editorRef.current;
       if (editor && typeof code === "string") {
@@ -125,46 +119,18 @@ export default function CodeEditor({ socket, roomId, username }) {
       }
     };
 
-    // Handler for cursor position updates from other users
-    const handleCursorUpdate = ({ userId: otherId, position }) => {
-      if (otherId === userId) return; // Ignore own cursor updates
-      const editor = editorRef.current;
-      const model = editor?.getModel();
-      if (editor && model && monacoRef.current) {
-        // Add/update decorations for remote cursors
-        editor.deltaDecorations([], [
-          {
-            range: new monacoRef.current.Range(
-              position.lineNumber,
-              position.column,
-              position.lineNumber,
-              position.column
-            ),
-            options: {
-              className: "remote-cursor", // CSS class for cursor styling
-              afterContentClassName: "remote-cursor-label", // CSS class for cursor label (e.g., username)
-            },
-          },
-        ]);
-      }
-    };
-
-
     socket.on("code-update", handleCodeUpdate);
     socket.on("load-code", handleLoadCode);
-    socket.on("cursor-update", handleCursorUpdate);
 
     if (isEditorReady) {
       socket.emit("join-room", { roomId, username });
     } else {
-      console.log(`[CLIENT] Editor not ready yet, delaying 'join-room' emit for ${username}.`); // DEBUG
+      console.log(`[CLIENT] Editor not ready yet, delaying 'join-room' emit for ${username}.`); 
     }
 
     return () => {
-
       socket.off("code-update", handleCodeUpdate);
       socket.off("load-code", handleLoadCode);
-      socket.off("cursor-update", handleCursorUpdate);
     };
   }, [socket, roomId, userId, username, isEditorReady]);
 
@@ -236,7 +202,7 @@ export default function CodeEditor({ socket, roomId, username }) {
   }
   const dismissAiOverlay = () => {
     setShowAiResponseOverlay(false);
-    setAiResponse(""); // Clear response when dismissed
+    setAiResponse(""); 
   };
 
   // Markdown renderers
@@ -267,7 +233,7 @@ export default function CodeEditor({ socket, roomId, username }) {
   };
 
   return (
-    <div className="flex h-screen bg-gray-900 text-gray-100 overflow-hidden">
+    <div className="flex h-screen sm:h-screen bg-gray-900 text-gray-100 ">
       {sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
@@ -317,14 +283,14 @@ export default function CodeEditor({ socket, roomId, username }) {
               onMount={handleEditorDidMount}
             />
           </div>
-
-          <div className="sm:w-1/3 pt-5 sm:pt-0 w-full flex flex-col gap-4 h-[40vh] sm:h-auto">
+          <div className="sm:w-1/3 pt-5 sm:pt-0 w-full flex flex-col gap-4 h-[60vh] sm:h-auto">
             <InputOutputPanel
               input={input}
               setInput={setInput}
               output={output}
             />
           </div>
+
         </main>
 
         {/* Full-page Overlay for AI Response */}
@@ -332,11 +298,10 @@ export default function CodeEditor({ socket, roomId, username }) {
           <div
             className="absolute inset-0 bg-opacity-80 z-40 flex justify-center items-center p-6 bg-black/40 backdrop-blur-sm"
           >
-            {/* Outer flex container that fills screen and centers inner box */}
 
             <div
               className="bg-gray-800 text-white rounded-lg shadow-lg p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto relative"
-            // max height limits modal height, overflow-y-auto allows scrolling inside modal
+            
             >
               <button
                 onClick={dismissAiOverlay}
