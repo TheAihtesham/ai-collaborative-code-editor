@@ -40,8 +40,6 @@ io.on("connection", (socket) => {
       rooms[roomId].push({ userId: socket.id, username });
     }
 
-    console.log(`[SERVER] User ${username} (${socket.id}) joined room ${roomId}. Current users in room:`, rooms[roomId].map(u => u.username)); // DEBUG: Log user joining
-
     // Notify all in room that a new user joined
     io.to(roomId).emit("user-joined", {
       users: rooms[roomId],
@@ -64,15 +62,17 @@ io.on("connection", (socket) => {
         let chatHistory = [];
         let fullPrompt = prompt;
 
-        if (currentCode && currentCode.trim() !== " ") {
-          console.log('There is no code recieve from the frontend');
+        if (!currentCode || currentCode.trim() === "") {
+          console.log('No code received from the frontend.');
+          aiResponse = "Please provide code to explain.";
+        } else {
+          fullPrompt += `\n\nThis code is written in ${language}. Please explain the code:\n${currentCode}`;
         }
 
         chatHistory.push({ role: 'user', parts: [{ text: fullPrompt }] });
         const payload = { contents: chatHistory };
 
-        const apiKey = "AIzaSyBT2JVrpXVYLtgY7nMZZP1OoHtOOmJSTG4";
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API}`;
 
         const response = await fetch(apiUrl, {
           method: 'POST',
@@ -88,20 +88,21 @@ io.on("connection", (socket) => {
         }
 
         const result = await response.json();
-        if (result.candidates && result.candidates.length > 0 &&
-          result.candidates[0].content && result.candidates[0].content.parts &&
-          result.candidates[0].content.parts.length > 0) {
-          aiResponse = result.candidates[0].content.parts[0].text;
+
+        const aiText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (aiText) {
+          aiResponse = aiText;
           console.log(`[SERVER] AI response generated. Length: ${aiResponse.length}`);
         } else {
           aiResponse = "No valid response from AI.";
-          console.warn("[SERVER] Gemini API response structure unexpected:", result);
+          console.warn("[SERVER] Unexpected Gemini API response:", result);
         }
+
       } catch (error) {
         console.error("[SERVER] Error calling Gemini API:", error);
         aiResponse = `Error contacting AI: ${error.message}`;
       } finally {
-        // Emit the AI response back to the specific client that made the request
         socket.emit("ai-response", { response: aiResponse });
         console.log(`[SERVER] Emitted 'ai-response' to ${socket.id}.`);
       }
@@ -122,7 +123,6 @@ io.on("connection", (socket) => {
           message: `${user.username} left the room.`,
           userId: socket.id,
         });
-        console.log(`[SERVER] User ${user.username} (${socket.id}) left room ${roomId}. Remaining users:`, rooms[roomId].map(u => u.username)); // DEBUG: Log user leaving
       }
 
       if (rooms[roomId].length === 0) {
