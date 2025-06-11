@@ -49,7 +49,7 @@ export default function RoomPage() {
   if (!socket) return <div>Loading editor...</div>;
 
   return (
-    <main className=" w-full">
+    <main className=" w-full h-screen">
       <CodeEditor socket={socket} roomId={roomId} username={username} />
     </main>
   );

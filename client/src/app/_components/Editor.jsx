@@ -233,7 +233,7 @@ export default function CodeEditor({ socket, roomId, username }) {
   };
 
   return (
-    <div className="flex h-screen sm:h-screen bg-gray-900 text-gray-100 ">
+    <div className="flex sm:h-screen bg-gray-900 text-gray-100 ">
       {sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
@@ -283,7 +283,7 @@ export default function CodeEditor({ socket, roomId, username }) {
               onMount={handleEditorDidMount}
             />
           </div>
-          <div className="sm:w-1/3 pt-5 sm:pt-0 w-full flex flex-col gap-4 h-[60vh] sm:h-auto">
+          <div className="sm:w-1/3 pt-5 sm:pt-0 w-full flex flex-col gap-4 h-[45vh] sm:h-auto">
             <InputOutputPanel
               input={input}
               setInput={setInput}
