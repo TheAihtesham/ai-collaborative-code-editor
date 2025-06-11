@@ -1,4 +1,3 @@
-// SidebarControls.jsx
 import React, { useState } from 'react';
 
 export function SidebarControls({
@@ -38,7 +37,6 @@ export function SidebarControls({
         </button>
       </div>
 
-      {/* Tab Navigation */}
       <div className="flex border-b border-gray-700">
         <button
           className={`flex-1 py-3 text-center text-sm font-medium ${activeTab === 'users' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:bg-gray-700'
@@ -56,11 +54,10 @@ export function SidebarControls({
         </button>
       </div>
 
-      {/* Content based on active tab */}
+     
       <div className="flex-1 overflow-y-auto p-4 flex flex-col max-h-[calc(100vh-160px)] md:max-h-none">
         {activeTab === 'users' && (
           <>
-            {/* User List */}
             <div className="mb-6">
               <h3 className="text-lg font-semibold mb-2 text-gray-200">Online Users ({users.length})</h3>
               <ul className="space-y-2">
@@ -73,7 +70,6 @@ export function SidebarControls({
               </ul>
             </div>
 
-            {/* Language Selector */}
             <div className="mb-6">
               <label htmlFor="language-select" className="block text-sm font-medium text-gray-300 mb-1">Language</label>
               <select
@@ -91,7 +87,6 @@ export function SidebarControls({
               </select>
             </div>
 
-            {/* Theme Selector */}
             <div className="mb-6">
               <label htmlFor="theme-select" className="block text-sm font-medium text-gray-300 mb-1">Theme</label>
               <select
@@ -106,7 +101,6 @@ export function SidebarControls({
               </select>
             </div>
 
-            {/* Action Buttons */}
             <div className="space-y-3 mt-auto">
               <button
                 onClick={runCode}

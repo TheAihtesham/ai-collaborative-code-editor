@@ -63,7 +63,6 @@ io.on("connection", (socket) => {
         let fullPrompt = prompt;
 
         if (!currentCode || currentCode.trim() === "") {
-          console.log('No code received from the frontend.');
           aiResponse = "Please provide code to explain.";
         } else {
           fullPrompt += `\n\nThis code is written in ${language}. Please explain the code:\n${currentCode}`;
@@ -93,18 +92,14 @@ io.on("connection", (socket) => {
 
         if (aiText) {
           aiResponse = aiText;
-          console.log(`[SERVER] AI response generated. Length: ${aiResponse.length}`);
         } else {
           aiResponse = "No valid response from AI.";
-          console.warn("[SERVER] Unexpected Gemini API response:", result);
         }
 
       } catch (error) {
-        console.error("[SERVER] Error calling Gemini API:", error);
         aiResponse = `Error contacting AI: ${error.message}`;
       } finally {
         socket.emit("ai-response", { response: aiResponse });
-        console.log(`[SERVER] Emitted 'ai-response' to ${socket.id}.`);
       }
     })
   });

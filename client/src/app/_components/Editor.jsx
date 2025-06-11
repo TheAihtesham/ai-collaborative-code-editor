@@ -77,7 +77,6 @@ export default function CodeEditor({ socket, roomId, username }) {
     editorRef.current = editor;
     monacoRef.current = monaco;
     setIsEditorReady(true); 
-
   };
 
   // Effect for handling real-time code updates and initial code loading
@@ -92,12 +91,8 @@ export default function CodeEditor({ socket, roomId, username }) {
           updatingEditorFromSocket.current = true;
           model.setValue(code);
           updatingEditorFromSocket.current = false;
-        } else {
-          console.log('[CLIENT] "code-update" received but editor content is identical or model not ready.');
-        }
-      } else {
-        console.log('[CLIENT] "code-update" received but editorRef.current is null or code is not a string.');
-      }
+        } 
+      } 
     };
 
     // Handler for initial code load when a user joins
@@ -111,11 +106,7 @@ export default function CodeEditor({ socket, roomId, username }) {
           updatingEditorFromSocket.current = true;
           model.setValue(code);
           updatingEditorFromSocket.current = false;
-        } else {
-          console.log('[CLIENT] "load-code" received but editor content is identical or model not ready.');
-        }
-      } else {
-        console.log('[CLIENT] "load-code" received but editorRef.current is null or code is not a string.');
+        } 
       }
     };
 
@@ -124,9 +115,7 @@ export default function CodeEditor({ socket, roomId, username }) {
 
     if (isEditorReady) {
       socket.emit("join-room", { roomId, username });
-    } else {
-      console.log(`[CLIENT] Editor not ready yet, delaying 'join-room' emit for ${username}.`); 
-    }
+    } 
 
     return () => {
       socket.off("code-update", handleCodeUpdate);
