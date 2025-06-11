@@ -135,7 +135,7 @@ export default function CodeEditor({ socket, roomId, username }) {
     setOutput("Running code...");
 
     try {
-      const response = await fetch("http://localhost:8000/api/run-code", {
+      const response = await fetch("https://codemate-4fyl.onrender.com/api/run-code", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

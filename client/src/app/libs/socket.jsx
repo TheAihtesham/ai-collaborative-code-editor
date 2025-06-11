@@ -4,7 +4,7 @@ let socket = null;
 
 export const initSocket = () => {
   if (!socket) {
-    socket = io("http://localhost:8000", {
+    socket = io("https://codemate-4fyl.onrender.com", {
       transports: ["websocket"],
       reconnectionAttempts: 5,
       reconnectionDelay: 500,
