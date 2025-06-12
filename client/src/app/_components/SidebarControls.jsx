@@ -105,7 +105,7 @@ export function SidebarControls({
               <button
                 onClick={runCode}
                 disabled={isRunning}
-                className={`w-full py-2 px-4 rounded-md text-white font-semibold transition-colors duration-200 ${isRunning
+                className={`w-full py-2 px-4 rounded-md text-white font-semibold transition-colors duration-200 hidden md:block ${isRunning
                     ? "bg-green-600 cursor-not-allowed opacity-70"
                     : "bg-green-700 hover:bg-green-600"
                   }`}

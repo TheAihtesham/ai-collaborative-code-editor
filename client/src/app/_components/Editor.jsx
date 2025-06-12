@@ -76,7 +76,7 @@ export default function CodeEditor({ socket, roomId, username }) {
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
-    setIsEditorReady(true); 
+    setIsEditorReady(true);
   };
 
   // Effect for handling real-time code updates and initial code loading
@@ -91,8 +91,8 @@ export default function CodeEditor({ socket, roomId, username }) {
           updatingEditorFromSocket.current = true;
           model.setValue(code);
           updatingEditorFromSocket.current = false;
-        } 
-      } 
+        }
+      }
     };
 
     // Handler for initial code load when a user joins
@@ -106,7 +106,7 @@ export default function CodeEditor({ socket, roomId, username }) {
           updatingEditorFromSocket.current = true;
           model.setValue(code);
           updatingEditorFromSocket.current = false;
-        } 
+        }
       }
     };
 
@@ -115,7 +115,7 @@ export default function CodeEditor({ socket, roomId, username }) {
 
     if (isEditorReady) {
       socket.emit("join-room", { roomId, username });
-    } 
+    }
 
     return () => {
       socket.off("code-update", handleCodeUpdate);
@@ -191,7 +191,7 @@ export default function CodeEditor({ socket, roomId, username }) {
   }
   const dismissAiOverlay = () => {
     setShowAiResponseOverlay(false);
-    setAiResponse(""); 
+    setAiResponse("");
   };
 
   // Markdown renderers
@@ -260,11 +260,23 @@ export default function CodeEditor({ socket, roomId, username }) {
             </svg>
           </button>
           <h1 className="text-lg font-semibold">Code Editor</h1>
+          {/* Mobile-only Run Code Button */}
+          
           <div />
+          <button
+            onClick={runCode}
+            disabled={isRunning}
+            className={`md:hidden py-2 px-4 rounded-md text-white font-semibold transition-colors duration-200 ${isRunning
+              ? "bg-green-600 cursor-not-allowed opacity-70"
+              : "bg-green-700 hover:bg-green-600"
+              }`}
+          >
+            {isRunning ? "Running..." : "Run Code"}
+          </button>
         </header>
 
-        <main className="sm:flex w-full flex-1 gap-4 p-4 overflow-hidden">
-          <div className="w-full sm:w-2/3 border border-gray-700 rounded overflow-hidden h-[60vh] sm:h-auto">
+        <main className="block lg:flex h-full w-full flex-1 gap-4 p-4 overflow-hidden">
+          <div className="w-full lg:w-2/3 border border-gray-700 rounded overflow-hidden md:h-[55vh] lg:h-full sm:h-auto">
             <CodeEditorPanel
               language={language}
               theme={theme}
@@ -272,7 +284,7 @@ export default function CodeEditor({ socket, roomId, username }) {
               onMount={handleEditorDidMount}
             />
           </div>
-          <div className="sm:w-1/3 pt-5 sm:pt-0 w-full flex flex-col gap-4 h-[45vh] sm:h-auto">
+          <div className="lg:w-1/3 lg:pt-0 pt-5 md:w-full md:h-[43%] md:pt-[5px] w-full flex flex-col gap-4 lg:h-full h-[45vh] sm:h-auto">
             <InputOutputPanel
               input={input}
               setInput={setInput}
@@ -290,7 +302,7 @@ export default function CodeEditor({ socket, roomId, username }) {
 
             <div
               className="bg-gray-800 text-white rounded-lg shadow-lg p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto relative"
-            
+
             >
               <button
                 onClick={dismissAiOverlay}
